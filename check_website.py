@@ -1,11 +1,13 @@
 from __future__ import print_function
-
 from datetime import datetime
 import urllib.request
+import smtplib, ssl, os
 
-url = 'insert url here'
-keyword = 'Username?'
-email = 'insert email here'
+port = 465 # for ssl
+password = "password"
+url = 'enter url'
+keyword = 'website'
+email = 'email'
 
 
 def validate(res):
@@ -13,7 +15,7 @@ def validate(res):
     return result
 
 
-def lambda_handler(event, context):
+def check_website():
     print('Checking Site...')
 
     try:
@@ -21,33 +23,12 @@ def lambda_handler(event, context):
             print('Site not reachable')
             raise Exception('Validation failed')
     except:
-        print('Check failed!  Rebooting server.')
-        mailclient=boto3.client('ses')
-        ec2 = boto3.resource('ec2', region_name='us-east-1')
-        client = ec2.meta.client
-        rebootstatus = client.reboot_instances(InstanceIds=[instance])
-        print ('Reboot status: ' + str(rebootstatus))
-        
-        message='EC2 Instance ' + instance + ' Rebooted'
-
-        mailresponse = mailclient.send_email(
-            Source=email,
-            Destination={
-                'ToAddresses': [
-                email,
-                ]
-                },
-            Message={
-                'Subject': {
-                'Data': message},
-                'Body': {
-                'Text': {
-                'Data': str(rebootstatus),
-                    }
-                }
-            },
-        )   
-        raise
+        print('Check failed!  Rebooting raspi.')
+        message='Had to restart the Raspberry Pi - website check failed!'
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL("smtp.gmail.com", port, context=context) as server:
+            server.login(email, password)
+            server.sendmail(email, email, message)
     else:
         print('Check passed!')
         return 1;
